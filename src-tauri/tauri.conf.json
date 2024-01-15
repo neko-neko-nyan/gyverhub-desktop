@@ -1,0 +1,75 @@
+{
+  "package": {
+    "productName": "GyverHub Desktop",
+    "version": "0.0.1"
+  },
+  "tauri": {
+    "pattern": {
+      "use": "brownfield"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "url": "index.html",
+        "fileDropEnabled": false,
+        "width": 800,
+        "height": 600,
+        "minWidth": 450,
+        "minHeight": 450,
+        "theme": "Dark",
+        "title": "GyverHub Desktop",
+        "additionalBrowserArgs": "--disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-extensions --disable-background-timer-throttling --allow-running-insecure-content --disable-features=InterestFeedContentSuggestions,Translate,WebRtcHideLocalIpsWithMdns,BlockInsecurePrivateNetworkRequests,BlockInsecurePrivateNetworkRequestsDeprecationTrial --enable-blink-features=PrivateNetworkAccessNonSecureContextsAllowed"
+      }
+    ],
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "ru.nekodev.gyverhub.desktop",
+      "publisher": "NekoNekoNyan",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "copyright": "(c) NekoNekoNyan, 2024",
+      "category": "Utility",
+      "shortDescription": "A desktop client for GyverHub",
+      "longDescription": "A desktop client for GyverHub",
+      "windows": {
+        "digestAlgorithm": "SHA-256",
+        "webviewInstallMode": {
+          "type": "downloadBootstrapper",
+          "silent": true
+        },
+        "wix": {
+          "language": "ru-RU",
+          "license": "../license.msi.txt"
+        },
+        "nsis": {
+          "license": "../license.nsis.txt",
+          "installMode": "both",
+          "displayLanguageSelector": true,
+          "languages": ["Russian", "English"]
+        }
+      }
+    },
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "open": true,
+        "scope": []
+      }
+    },
+    "security": {
+      "csp": "*"
+    }
+  },
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devPath": "../src",
+    "distDir": "../src"
+  }
+}
