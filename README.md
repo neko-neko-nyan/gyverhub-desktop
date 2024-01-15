@@ -4,7 +4,7 @@
 
 # Download pre-built binnaries
 
-Binnaries will be available soon.
+[Click here to download](https://github.com/neko-neko-nyan/gyverhub-desktop/releases).
 
 # Building
 
