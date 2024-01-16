@@ -16,7 +16,6 @@
         "height": 600,
         "minWidth": 450,
         "minHeight": 450,
-        "theme": "Dark",
         "title": "GyverHub Desktop",
         "additionalBrowserArgs": "--disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-extensions --disable-background-timer-throttling --allow-running-insecure-content --disable-features=InterestFeedContentSuggestions,Translate,WebRtcHideLocalIpsWithMdns,BlockInsecurePrivateNetworkRequests,BlockInsecurePrivateNetworkRequestsDeprecationTrial --enable-blink-features=PrivateNetworkAccessNonSecureContextsAllowed"
       }

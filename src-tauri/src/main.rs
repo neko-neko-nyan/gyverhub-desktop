@@ -74,7 +74,7 @@ fn main() {
 
     tauri::Builder::default()
         .on_page_load(|win, _payload| {
-            let _ = win.eval("window.__desktop__=!0");
+            let _ = win.eval("window.__desktop__=!0;window.isLocal=()=>!0;");
 
             #[cfg(not(dev))]
             let _ = win.eval(
