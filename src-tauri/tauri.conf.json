@@ -52,6 +52,11 @@
           "displayLanguageSelector": true,
           "languages": ["Russian", "English"]
         }
+      },
+      "macOS": {
+        "minimumSystemVersion": "10.13",
+        "license": "../license.msi.txt",
+        "entitlements": "Entitlements.plist"
       }
     },
     "allowlist": {
