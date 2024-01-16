@@ -60,10 +60,10 @@
       "shell": {
         "open": true,
         "scope": []
+      },
+      "dialog": {
+        "all": true
       }
-    },
-    "security": {
-      "csp": "*"
     }
   },
   "build": {

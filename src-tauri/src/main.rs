@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Context, WindowUrl, utils::assets::EmbeddedAssets, api::path::app_data_dir};
+use tauri::{Context, WindowUrl, utils::{assets::EmbeddedAssets, config::AppUrl}, api::path::app_data_dir};
 use url::Url;
 use std::{fs, fs::File, path::Path, io};
 
@@ -53,8 +53,9 @@ fn check_updates(version_path: &Path, gh_path: &Path) -> bool {
 
 fn main() {
     let mut ctx: Context<EmbeddedAssets> = tauri::generate_context!();
+    let cfg: &mut tauri::Config = ctx.config_mut();
 
-    let path = app_data_dir(ctx.config()).expect("Failed to find data dir!");
+    let path = app_data_dir(&cfg).expect("Failed to find data dir!");
 
     let mut gh_path = path.clone();
     gh_path.push("gyverhub.html");
@@ -66,12 +67,19 @@ fn main() {
 
     if check_updates(&version_path, &gh_path) {
         let url = Url::from_file_path(&gh_path).expect("Failed to build local URL!");
-        ctx.config_mut().tauri.windows[0].url = WindowUrl::External(url);
+        cfg.tauri.windows[0].url = WindowUrl::External(url.clone());
+        cfg.build.dev_path = AppUrl::Url(WindowUrl::External(url.clone()));
+        cfg.build.dist_dir = AppUrl::Url(WindowUrl::External(url));
     }
 
     tauri::Builder::default()
         .on_page_load(|win, _payload| {
-            win.eval("window.__desktop__=!0,document.addEventListener('contextmenu',e=>(e.preventDefault(),!1),{capture:!0}),document.addEventListener('selectstart',e=>(e.preventDefault(),!1),{capture:!0});").expect("msg");
+            let _ = win.eval("window.__desktop__=!0");
+
+            #[cfg(not(dev))]
+            let _ = win.eval(
+                "document.addEventListener('contextmenu',e=>(e.preventDefault(),!1),{capture:!0}),document.addEventListener('selectstart',e=>(e.preventDefault(),!1),{capture:!0});"
+            );
         })
         .run(ctx)
         .expect("error while running tauri application");
