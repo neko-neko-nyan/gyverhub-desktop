@@ -1,6 +1,6 @@
 [package]
 name = "gyverhub-desktop"
-version = "0.0.1"
+version = "0.0.2"
 description = "A desktop client for GyverHub"
 authors = ["NekoNekoNyan <me@neko-dev.ru"]
 license = "MIT"
