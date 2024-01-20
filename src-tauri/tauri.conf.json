@@ -1,7 +1,7 @@
 {
   "package": {
     "productName": "GyverHub Desktop",
-    "version": "0.0.2"
+    "version": "0.0.3"
   },
   "tauri": {
     "pattern": {
@@ -72,9 +72,33 @@
     "cli": {
       "args": [
         {
+          "name": "keep-version",
+          "short": "k",
+          "description": "Do not update client, keep current version"
+        },
+        {
           "name": "builtin",
           "short": "b",
-          "description": "Use builtin client"
+          "description": "Always builtin client (implies --keep-version)"
+        },
+        {
+          "name": "force-update",
+          "short": "u",
+          "description": "Perform update even if latest version is installed"
+        },
+        {
+          "name": "clean",
+          "description": "Clean all application data (implies --force-update)"
+        },
+        {
+          "name": "help",
+          "short": "h",
+          "description": "Show this help message and exit"
+        },
+        {
+          "name": "version",
+          "short": "V",
+          "description": "Show version and exit"
         }
       ]
     }

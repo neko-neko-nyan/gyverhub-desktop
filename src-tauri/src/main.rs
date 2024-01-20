@@ -1,12 +1,12 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs, fs::File, io, path::Path};
+use std::{fs, fs::{File, remove_dir_all, remove_file}, io, path::Path};
 use tauri::{
-    api::{file::read_binary, path::app_data_dir},
+    api::{file::read_binary, path::app_local_data_dir, cli::Matches},
     http::ResponseBuilder,
     utils::assets::EmbeddedAssets,
-    Context,
+    Context, Manager
 };
 
 const VERSION_URL: &str = "https://raw.githubusercontent.com/GyverLibs/GyverHub-web/main/version.txt";
@@ -83,45 +83,77 @@ fn target_os() -> &'static str {
     }
 }
 
-static mut USE_FS: bool = false;
+fn has_cli_arg(matches: &Matches, flag: &str, default: bool) -> tauri::Result<bool> {
+    match matches.args.get(flag) {
+        Some(value) => {
+            Ok(value.value.as_bool().unwrap())
+        }
+        None => Ok(default)
+    }
+}
+
+fn print_error(e: io::Error) {
+    println!("{}", e);
+}
 
 fn main() {
+    static mut PAGE_DATA: Vec<u8> = vec![];
+
     let mut ctx: Context<EmbeddedAssets> = tauri::generate_context!();
     let cfg: &mut tauri::Config = ctx.config_mut();
 
-    let path = app_data_dir(&cfg).expect("Failed to find data dir!");
+    let path = app_local_data_dir(&cfg).expect("Failed to find data dir!");
+    let gh_path = path.join("gyverhub.html");
+    let version_path = path.join("version.txt");
 
-    let mut gh_path = path.clone();
-    gh_path.push("gyverhub.html");
+    let app = tauri::Builder::default()
+        .setup(move |app| {
+            let matches = app.get_cli_matches()?;
 
-    let mut version_path = path.clone();
-    version_path.push("version.txt");
+            let use_builtin = has_cli_arg(&matches, "builtin", false)?;
+            let keep_version = has_cli_arg(&matches, "keep-version", use_builtin)?;
 
-    let _ = fs::create_dir(&path); // do not check errors
-    let use_fs = check_updates(&version_path, &gh_path);
-    unsafe {
-        USE_FS = use_fs;
-    };
-    let desktop_version = cfg.package.version.clone().unwrap();
+            let clean_data = has_cli_arg(&matches, "clean", false)?;
+            let force_update = has_cli_arg(&matches, "force-update", false)?;
 
-    tauri::Builder::default()
-        .setup(|app|{
-            match app.get_cli_matches() {
-                Ok(matches) => {
-                  let value = matches.args.get("builtin");
-                  if value.is_some_and(|x| x.value.as_bool().unwrap()) {
-                    unsafe {
-                      USE_FS = false;
-                    }
-                  }
-                }
-                Err(_) => {}
-              }
+            if clean_data {
+                app.path_resolver().app_cache_dir().map_or(Ok(()), remove_dir_all).err().map(print_error);
+                app.path_resolver().app_config_dir().map_or(Ok(()), remove_dir_all).err().map(print_error);
+                #[cfg(target_os = "macos")]
+                app.path_resolver().app_data_dir().map_or(Ok(()), remove_dir_all).err().map(print_error);
+
+            } else if force_update {
+                remove_file(version_path.clone()).err().map(print_error);
+                remove_file(gh_path.clone()).err().map(print_error);
+            }
+
+            let use_fs = if use_builtin {
+                true
+            } else if keep_version {
+                gh_path.exists()
+            } else {
+                let _ = fs::create_dir(&path); // do not check errors
+                check_updates(&version_path, &gh_path)
+            };
+
+            let data = if use_fs {
+                read_binary(&gh_path)?
+            } else {
+                app.asset_resolver().get(String::default()).unwrap().bytes
+            };
+
+            unsafe {
+                PAGE_DATA = data;
+            };
+
             Ok(())
         })
         .on_page_load(move |win, _payload| {
-            let code = format!("window.GyverHubDesktop={{version:'{}',arch:'{}',os:'{}',debug:{}}};",
-                desktop_version, target_arch(), target_os(), if cfg!(dev) {"true"} else {"false"});
+            let cfg = win.app_handle().config();
+            let version = cfg.package.version.as_ref().unwrap();
+
+            let code: String = format!("window.GyverHubDesktop={{version:'{}',arch:'{}',os:'{}',debug:{}}};",
+                version, target_arch(), target_os(), if cfg!(dev) {"true"} else {"false"});
             let _ = win.eval(&code);
 
             #[cfg(not(dev))]
@@ -129,18 +161,15 @@ fn main() {
                 "document.addEventListener('contextmenu',e=>(e.preventDefault(),!1),{capture:!0}),document.addEventListener('selectstart',e=>(e.preventDefault(),!1),{capture:!0});"
             );
         })
-        .register_uri_scheme_protocol("app", move |app, req| {
+        .register_uri_scheme_protocol("app",  |_, req| {
             if req.uri() == "app://localhost/" {
-                let data = if unsafe {USE_FS} {
-                    read_binary(&gh_path)?
-                } else {
-                   app.asset_resolver().get(String::default()).unwrap().bytes
-                };
-                ResponseBuilder::new().mimetype("text/html").body(data)
+                ResponseBuilder::new().mimetype("text/html").body(unsafe { PAGE_DATA.clone() })
             } else {
                 ResponseBuilder::new().status(404).body(Vec::new())
             }
         })
-        .run(ctx)
-        .expect("error while running tauri application");
+        .build(ctx).expect("error while building tauri application");
+
+    
+    app.run(|_, _| {});
 }
