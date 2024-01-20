@@ -1,9 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Context, WindowUrl, utils::{assets::EmbeddedAssets, config::AppUrl}, api::path::app_data_dir};
-use url::Url;
-use std::{fs, fs::File, path::Path, io};
+use std::{fs, fs::File, io, path::Path};
+use tauri::{
+    api::{file::read_binary, path::app_data_dir},
+    http::ResponseBuilder,
+    utils::assets::EmbeddedAssets,
+    Context,
+};
 
 const VERSION_URL: &str = "https://raw.githubusercontent.com/GyverLibs/GyverHub-web/main/version.txt";
 const UPDATE_URL: &str = "https://raw.githubusercontent.com/GyverLibs/GyverHub-web/main/app/index.html";
@@ -79,6 +83,8 @@ fn target_os() -> &'static str {
     }
 }
 
+static mut USE_FS: bool = false;
+
 fn main() {
     let mut ctx: Context<EmbeddedAssets> = tauri::generate_context!();
     let cfg: &mut tauri::Config = ctx.config_mut();
@@ -91,26 +97,49 @@ fn main() {
     let mut version_path = path.clone();
     version_path.push("version.txt");
 
-    let _ = fs::create_dir(&path);  // do not check errors
-
-    if check_updates(&version_path, &gh_path) {
-        let url = Url::from_file_path(&gh_path).expect("Failed to build local URL!");
-        cfg.tauri.windows[0].url = WindowUrl::External(url.clone());
-        cfg.build.dev_path = AppUrl::Url(WindowUrl::External(url.clone()));
-        cfg.build.dist_dir = AppUrl::Url(WindowUrl::External(url));
-    }
-
+    let _ = fs::create_dir(&path); // do not check errors
+    let use_fs = check_updates(&version_path, &gh_path);
+    unsafe {
+        USE_FS = use_fs;
+    };
     let desktop_version = cfg.package.version.clone().unwrap();
 
     tauri::Builder::default()
+        .setup(|app|{
+            match app.get_cli_matches() {
+                Ok(matches) => {
+                  let value = matches.args.get("builtin");
+                  if value.is_some_and(|x| x.value.as_bool().unwrap()) {
+                    unsafe {
+                      USE_FS = false;
+                    }
+                  }
+                }
+                Err(_) => {}
+              }
+            Ok(())
+        })
         .on_page_load(move |win, _payload| {
-            let code = format!("window.GyverHubDesktop={{version:'{}',arch:'{}',os:'{}',debug:{}}};", desktop_version, target_arch(), target_os(), if cfg!(dev) {"true"} else {"false"});
+            let code = format!("window.GyverHubDesktop={{version:'{}',arch:'{}',os:'{}',debug:{}}};",
+                desktop_version, target_arch(), target_os(), if cfg!(dev) {"true"} else {"false"});
             let _ = win.eval(&code);
 
             #[cfg(not(dev))]
             let _ = win.eval(
                 "document.addEventListener('contextmenu',e=>(e.preventDefault(),!1),{capture:!0}),document.addEventListener('selectstart',e=>(e.preventDefault(),!1),{capture:!0});"
             );
+        })
+        .register_uri_scheme_protocol("app", move |app, req| {
+            if req.uri() == "app://localhost/" {
+                let data = if unsafe {USE_FS} {
+                    read_binary(&gh_path)?
+                } else {
+                   app.asset_resolver().get(String::default()).unwrap().bytes
+                };
+                ResponseBuilder::new().mimetype("text/html").body(data)
+            } else {
+                ResponseBuilder::new().status(404).body(Vec::new())
+            }
         })
         .run(ctx)
         .expect("error while running tauri application");

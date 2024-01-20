@@ -10,7 +10,7 @@
     "windows": [
       {
         "label": "main",
-        "url": "index.html",
+        "url": "app://localhost/",
         "fileDropEnabled": false,
         "width": 800,
         "height": 600,
@@ -68,12 +68,25 @@
       "dialog": {
         "all": true
       }
+    },
+    "cli": {
+      "args": [
+        {
+          "name": "builtin",
+          "short": "b",
+          "description": "Use builtin client"
+        }
+      ]
     }
   },
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "../src",
-    "distDir": "../src"
+    "devPath": [
+      "../src/index.html"
+    ],
+    "distDir": [
+      "../src/index.html"
+    ]
   }
 }
