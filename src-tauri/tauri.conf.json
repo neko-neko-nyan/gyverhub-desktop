@@ -69,6 +69,22 @@
         "all": true
       }
     },
+    "security": {
+      "dangerousRemoteDomainIpcAccess": [
+        {
+          "windows": ["main"],
+          "domain": "localhost",
+          "scheme": "app",
+          "enableTauriAPI": true
+        },
+        {
+          "windows": ["main"],
+          "domain": "app.localhost",
+          "scheme": "https",
+          "enableTauriAPI": true
+        }
+      ]
+    },
     "cli": {
       "args": [
         {
